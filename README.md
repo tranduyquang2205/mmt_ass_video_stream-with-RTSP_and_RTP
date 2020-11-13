@@ -1,12 +1,19 @@
-# mmt_streaming_video_with_RTSP_and_RTP
-Implementing a streaming video server and client that communicate using the Real-Time Streaming Protocol (RTSP) and send data using the Real-time Transfer Protocol (RTP).
+Open a terminal:
+    python Server.py 1025
 
-Running the code: \
-First, we need to start the server: \
- #python Server.py server_port\
- (The standard RTSP port is 554, but you will need to choose a port number greater than 1024.)\
-Then, start the client with the command:\
- #python ClientLauncher.py server_host server_port RTP_port video_file \
-, where server_host is the name of the machine where the server is running, server_port is the port
-where the server is listening on, RTP_port is the port where the RTP packets are received, and video_file is
-the name of the video file you want to request (we have provided one example file movie.Mjpeg).
+Open another terminal:
+    python ClientLauncher.py 127.0.0.1 1025 5008 video.mjpeg
+    
+@ Client.py
+    # SETUP function
+    # PLAY function
+    # PAUSE function
+    # TEARDOWN function
+@ RtpPacket.py
+    # Set the RTP-version filed(V) = 2
+    # Set padding(P), extension(X), # of contributing sources(CC), and marker(M) fields => all to 0
+    # Set payload type field(PT). we use MJPEG type, type number is 26
+    # Set sequence number.(frameNbr argument)
+    # Set timestamp (via Python time module)
+    # Set source identifier(SSRC)(identifies the server,pick an ID you like)
+    # We have no other contributing sources(field CC == 0), the CSRC-field does not exist. The packet header is 12 bytes
