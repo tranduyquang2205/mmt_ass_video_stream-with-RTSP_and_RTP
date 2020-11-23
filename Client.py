@@ -3,6 +3,7 @@ from tkinter import *
 from PIL import Image, ImageTk
 import socket, threading, sys, traceback, os
 import time
+import datetime
 from RtpPacket import RtpPacket
 
 CACHE_FILE_NAME = "cache-"
@@ -19,6 +20,7 @@ class Client:
 	PLAY = 1
 	PAUSE = 2
 	TEARDOWN = 3
+	DESCRIBE = 4
 
 
 	# Initiation..
@@ -37,8 +39,18 @@ class Client:
 		self.teardownAcked = 0
 		self.connectToServer()
 		self.frameNbr = 0
+		self.DESCRIBE_STR = "DESCRIBE"
+		self.DESCRIBE_STR = "DESCRIBE"
+		self.SETUP_STR = "SETUP"
+		self.RTSP_VER = "RTSP/1.0"
+		self.TRANSPORT = "RTP/AVP"
+		self.PLAY_STR = "PLAY"
+		self.PAUSE_STR = "PAUSE"
+		self.TEARDOWN_STR = "TEARDOWN"
+		#extend
 		self.total_time = 0
 		self.total_data = 0
+		self.firstPlay = True
 	def createWidgets(self):
 		"""Build GUI."""
 		self.master.resizable(width=True, height=True)
@@ -76,6 +88,12 @@ class Client:
 		self.pause["command"] = self.pauseMovie
 		self.pause.grid(row=3, column=2, padx=2, pady=2)
 
+		# Create Describe button
+		self.start = Button(self.master, width=20, padx=3, pady=3,bg='yellow',fg="black")
+		self.start["text"] = "Describe"
+		self.start["command"] = self.describeMovie
+		self.start.grid(row=3, column=3, padx=2, pady=2)
+
 		# Create a label to display the movie
 		self.label = Label(self.master, height=19)
 		self.label.grid(row=2, column=1, columnspan=3, sticky=W+E+N+S, padx=5, pady=5)
@@ -110,17 +128,24 @@ class Client:
 		"""Pause button handler."""
 		if self.state == self.PLAYING:
 			self.sendRtspRequest(self.PAUSE)
-
 	def playMovie(self):
+		if self.state == self.INIT and self.firstPlay:
+			self.sendRtspRequest(self.SETUP)
+			self.firstPlay = False
+			# Wait until ready
+			while self.state != self.READY:
+				pass
 
-		"""Play button handler."""
 		if self.state == self.READY:
 			# Create a new thread to listen for RTP packets
 			threading.Thread(target=self.listenRtp).start()
 			self.playEvent = threading.Event()
 			self.playEvent.clear()
 			self.sendRtspRequest(self.PLAY)
-
+	def describeMovie(self):
+		"""Describe button handler"""
+		#if self.state == self.READY:
+		self.sendRtspRequest(self.DESCRIBE)
 	def listenRtp(self):
 		"""Listen for RTP packets."""
 		start_time = time.time()
@@ -241,6 +266,28 @@ class Client:
 
 			# Keep track of the sent request.
 			self.requestSent = self.TEARDOWN
+
+		elif requestCode == self.DESCRIBE:
+
+			self.rtspSeq = self.rtspSeq + 1
+			request = "%s %s %s\nCSeq: %d\nSession: %d" % (
+				self.DESCRIBE_STR, self.fileName, self.RTSP_VER, self.rtspSeq, self.sessionId)
+			self.requestSent = self.DESCRIBE
+			self.rtspSocket.send(request.encode())
+			print('\nData sent:\n' + request)
+			x = datetime.datetime.now()
+			top = Toplevel()
+			top.geometry('300x100')
+			Lb1 = Listbox(top, width=50, height=20)
+			Lb1.insert(1, "Describe: ")
+			Lb1.insert(2, "1. File Video: " + str(self.fileName))
+			Lb1.insert(3, "2. Date: " + str(x.date()))
+			Lb1.insert(4, "3. Time: " + str(x.strftime("%X")))
+			Lb1.insert(5, "4. Day: " + str(x.strftime("%A")))
+			Lb1.insert(5, "5. Session: " + str(self.sessionId))
+
+			Lb1.pack()
+			top.mainloop()
 		else:
 			return
 
